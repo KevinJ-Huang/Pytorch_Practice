@@ -1,3 +1,5 @@
+
+#### Scale
 class UNet(nn.Module):
 
     def __init__(self):
@@ -32,6 +34,61 @@ class UNet(nn.Module):
 
             x = F.relu(F.conv2d(x, weight1, bias = self.conv2.bias,stride=1, padding=1))
             x = F.relu(F.conv2d(x, weight2, bias = self.conv3.bias,stride=1, padding=1))
+            x = self.conv4(x)
+            x_out.append(x)
+        out = torch.cat(x_out, dim=0)
+        return (out*input).clamp(-0.05,1.05)
+
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    #### KPN
+    
+    class UNet(nn.Module):
+
+    def __init__(self):
+        super(UNet, self).__init__()
+        self.conv1 = nn.Conv2d(3, 16, 9, padding=4)
+        self.blocks = nn.Sequential(
+            ConvBlock(),
+            ConvBlock(),
+            ConvBlock(),
+            ConvBlock(),
+        )
+        self.conv2 = nn.Conv2d(16, 16, 3, padding=1)
+        self.conv3 = nn.Conv2d(16, 16, 3, padding=1)
+        for p in self.parameters():
+            p.requires_grad = False
+        self.fc1 = nn.Linear(24*24*3, 2304)
+        self.fc2 = nn.Linear(24*24*3, 2304)
+        self.conv4 = nn.Conv2d(16, 3, 9, padding=4)
+
+    def forward(self, x):
+        input = x
+        x_out = []
+        for i in range(1):
+            x = input.narrow(0, i, 1)
+
+            x_down = F.upsample(x, size=(24, 24), mode='bilinear')
+            weight1 = self.fc1(x_down.view(24*24*3))
+            weight2 = self.fc2(x_down.view(24*24*3))
+
+            x = F.relu(self.conv1(x))
+            x = self.blocks(x)
+            x = F.relu(F.conv2d(x, weight1.resize(16,16,3,3), bias = None,stride=1, padding=1))
+            x = F.relu(self.conv2(x))
+            x = F.relu(F.conv2d(x, weight2.resize(16,16,3,3), bias = None,stride=1, padding=1))
+            x = F.relu(self.conv3(x))
             x = self.conv4(x)
             x_out.append(x)
         out = torch.cat(x_out, dim=0)
